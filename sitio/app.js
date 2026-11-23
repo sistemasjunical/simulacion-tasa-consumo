@@ -67,9 +67,9 @@ function hueco(id) {
   return id.clave;
 }
 
-function grafico(series, bandas, titulo, ejeY) {
+function grafico(series, bandas, titulo, ejeY, formato) {
   const clave = `g${pendientes.length}`;
-  hueco({ tipo: "lineas", clave, series, bandas, titulo, ejeY });
+  hueco({ tipo: "lineas", clave, series, bandas, titulo, ejeY, formato });
   return `<div id="${clave}" class="grafico"></div>`;
 }
 
@@ -97,13 +97,14 @@ function baseLayout(titulo, alto) {
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "#ffffff",
     font: { family: "Source Sans 3, Segoe UI, sans-serif", color: "#1C1C1C", size: 13 },
+    separators: ",.",
     hovermode: "x unified",
     hoverlabel: { bgcolor: "#ffffff", bordercolor: "#D5D7DA", font: { family: "Source Sans 3, Segoe UI, sans-serif", color: "#1C1C1C" } },
     legend: { orientation: "h", yanchor: "bottom", y: 1.02, x: 0 },
-    margin: { l: 58, r: 18, t: 72, b: 48 },
+    margin: { l: 64, r: 24, t: 78, b: 48 },
     height: alto,
-    xaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA" },
-    yaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA", separatethousands: true },
+    xaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA", automargin: true },
+    yaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA", separatethousands: true, automargin: true },
     transition: { duration: 450, easing: "cubic-in-out" },
   };
 }
@@ -126,7 +127,11 @@ function trazo(serie) {
 
 function dibujarGraficos() {
   const lote = pendientes.splice(0);
-  const config = { responsive: true, displayModeBar: false, displaylogo: false };
+  const config = {
+    responsive: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ["lasso2d", "select2d"],
+  };
   lote.forEach((item) => {
     const nodo = document.getElementById(item.clave);
     if (!nodo || typeof Plotly === "undefined") return;
@@ -150,6 +155,12 @@ function dibujarGraficos() {
       const layout = baseLayout(item.titulo, 460);
       layout.xaxis.title = "Mes";
       layout.yaxis.title = item.ejeY;
+      if (item.formato) layout.yaxis.tickformat = item.formato;
+      layout.xaxis.showspikes = true;
+      layout.xaxis.spikemode = "across";
+      layout.xaxis.spikedash = "dot";
+      layout.xaxis.spikethickness = 1;
+      layout.xaxis.spikecolor = "#444";
       Plotly.newPlot(nodo, datos, layout, config);
       return;
     }
@@ -204,12 +215,30 @@ function dibujarGraficos() {
   });
 }
 
+function mesesEntre(origen, destino) {
+  const [oy, om] = origen.split("-").map(Number);
+  const [dy, dm] = destino.split("-").map(Number);
+  return (dy - oy) * 12 + (dm - om);
+}
+
+function horizonteActual() {
+  if (document.querySelector('input[name="modo"]:checked').value === "meses") {
+    return Number(document.getElementById("horizonte").value);
+  }
+  const origen = D.panel.fecha[D.panel.fecha.length - 1];
+  const destino = document.getElementById("fecha-final").value;
+  return Math.min(24, Math.max(1, mesesEntre(origen, destino)));
+}
+
 function estado() {
+  const fechas = D.panel.fecha;
+  const a = Number(document.getElementById("desde-idx").value);
+  const b = Number(document.getElementById("hasta-idx").value);
   return {
     modelo: document.getElementById("modelo").value,
-    horizonte: Number(document.getElementById("horizonte").value),
-    desde: document.getElementById("desde").value,
-    hasta: document.getElementById("hasta").value,
+    horizonte: horizonteActual(),
+    desde: fechas[Math.min(a, b)],
+    hasta: fechas[Math.max(a, b)],
     politica: document.getElementById("politica").checked,
     vista: document.querySelector('input[name="vista"]:checked').value,
     seccion: document.querySelector('input[name="seccion"]:checked').value,
@@ -257,19 +286,20 @@ function seccionHistorial() {
   });
   const hayCrecimiento = agregados.some((serie) => serie.y.some((valor) => valor !== null));
   const segundo = crecimiento && !hayCrecimiento
-    ? "<p>El crecimiento anual empieza doce meses después del primer saldo. En esta muestra, el primer valor es el de mayo de 2003. Amplía el rango.</p>"
+    ? "<p>El crecimiento anual empieza doce meses después del primer saldo. En esta muestra, el primer valor es el de mayo de 2003. Amplíe el rango.</p>"
     : grafico(
       agregados,
       [],
       crecimiento ? "Crecimiento anual de M1, M2 y M3" : "M1, M2 y M3 en niveles",
       crecimiento ? "100 × ln(Mₜ / Mₜ₋₁₂)" : "Miles de millones de pesos",
+      crecimiento ? undefined : ",.0f",
     );
   return `
     <h2>Historial</h2>
-    <p>El rango cuenta por mes: cualquier día del mes muestra el cierre de ese mes. No cambia tu proyección.</p>
+    <p class="nota">El rango cuenta por mes: cualquier día del mes muestra el cierre de ese mes. No cambia el modelo ni la proyección.</p>
     ${grafico(series, [], "Tasa de crédito de consumo", "Porcentaje efectivo anual")}
     ${segundo}
-    <p>Los niveles están en miles de millones de pesos. Octubre de 2026 promedia ${coma(D.parcial.tasa)} % con ${D.parcial.n} viernes. Ese punto solo aparece si el rango llega a septiembre de 2026 y no entra al modelo.</p>`;
+    <p class="nota">Los niveles están en miles de millones de pesos. M3 es el agregado más grande y por eso marca la escala. El crecimiento es 100 × ln(Mₜ / Mₜ₋₁₂). Octubre de 2026 promedia ${coma(D.parcial.tasa)} % con ${D.parcial.n} viernes. Ese punto, el rombo, solo aparece si el rango llega a septiembre de 2026 y no entra al modelo.</p>`;
 }
 
 function seccionProyeccion() {
@@ -512,12 +542,44 @@ function descargar(nombre, texto) {
   enlace.click();
 }
 
+function marcarControles() {
+  const desde = document.getElementById("desde-idx");
+  const hasta = document.getElementById("hasta-idx");
+  if (Number(desde.value) > Number(hasta.value)) {
+    const activo = document.activeElement;
+    if (activo === desde) hasta.value = desde.value;
+    else desde.value = hasta.value;
+  }
+  const meses = document.querySelector('input[name="modo"]:checked').value === "meses";
+  document.getElementById("bloque-meses").hidden = !meses;
+  document.getElementById("bloque-fecha").hidden = meses;
+  const control = document.getElementById("horizonte");
+  const salida = document.getElementById("horizonte-valor");
+  const pct = (Number(control.value) - Number(control.min)) / (Number(control.max) - Number(control.min));
+  salida.textContent = control.value;
+  salida.style.left = `calc(${pct * 100}% - 0.7rem)`;
+  const fechas = D.panel.fecha;
+  const a = Number(document.getElementById("desde-idx").value);
+  const b = Number(document.getElementById("hasta-idx").value);
+  document.getElementById("desde-etiq").textContent = fechas[Math.min(a, b)];
+  document.getElementById("hasta-etiq").textContent = fechas[Math.max(a, b)];
+  const n = fechas.length - 1;
+  const relleno = document.getElementById("relleno");
+  relleno.style.left = `${(Math.min(a, b) / n) * 100}%`;
+  relleno.style.width = `${(Math.abs(b - a) / n) * 100}%`;
+  const equiv = document.getElementById("equivale");
+  equiv.textContent = `Equivale a ${horizonteActual()} meses desde septiembre de 2026.`;
+}
+
 function pintar() {
   pendientes.length = 0;
+  marcarControles();
   const ui = estado();
-  document.getElementById("horizonte-valor").textContent = String(ui.horizonte);
-  const punto = senda("ridge_agregados").find((fila) => fila.horizonte === 12);
-  document.getElementById("resumen").textContent = `A 12 meses tu proyección es ${coma(punto.proyeccion)} %.`;
+  const url = new URL(location.href);
+  if (url.searchParams.get("seccion") !== ui.seccion) {
+    url.searchParams.set("seccion", ui.seccion);
+    history.replaceState(null, "", url);
+  }
   const contenido = document.getElementById("contenido");
   if (ui.seccion === "historial") contenido.innerHTML = seccionHistorial();
   else if (ui.seccion === "proyeccion") contenido.innerHTML = seccionProyeccion();
@@ -554,17 +616,18 @@ function iniciar() {
   });
   modelo.value = "ridge_agregados";
   const fechas = D.panel.fecha;
-  document.getElementById("desde").value = fechas[0];
-  document.getElementById("hasta").value = fechas[fechas.length - 1];
-  document.getElementById("desde").min = fechas[0];
-  document.getElementById("desde").max = fechas[fechas.length - 1];
-  document.getElementById("hasta").min = fechas[0];
-  document.getElementById("hasta").max = fechas[fechas.length - 1];
-  ["modelo", "horizonte", "desde", "hasta", "politica"].forEach((id) => {
+  const hasta = document.getElementById("hasta-idx");
+  hasta.max = String(fechas.length - 1);
+  hasta.value = String(fechas.length - 1);
+  document.getElementById("desde-idx").max = String(fechas.length - 1);
+  const pedido = new URLSearchParams(location.search).get("seccion");
+  const radio = pedido && document.querySelector(`input[name="seccion"][value="${pedido}"]`);
+  if (radio) radio.checked = true;
+  ["modelo", "horizonte", "fecha-final", "desde-idx", "hasta-idx", "politica"].forEach((id) => {
     document.getElementById(id).addEventListener("input", pintar);
     document.getElementById(id).addEventListener("change", pintar);
   });
-  document.querySelectorAll('input[name="vista"], input[name="seccion"]').forEach((input) => {
+  document.querySelectorAll('input[name="vista"], input[name="seccion"], input[name="modo"]').forEach((input) => {
     input.addEventListener("change", pintar);
   });
   pintar();

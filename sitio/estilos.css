@@ -19,7 +19,7 @@ body {
 
 .marco {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 304px 1fr;
   min-height: 100vh;
 }
 
@@ -68,9 +68,88 @@ aside .nota { color: var(--suave); font-size: 0.82rem; margin-top: 0.8rem; }
 
 main { padding: 1.2rem 1.6rem 2.4rem; max-width: 1080px; }
 
-h1 { font-size: 1.55rem; font-weight: 560; margin: 0 0 0.35rem; }
+h1 { font-size: 2rem; font-weight: 700; margin: 0.2rem 0 0.8rem; letter-spacing: -0.02em; }
 
-.resumen { margin: 0 0 0.9rem; }
+.etiqueta { display: block; margin: 0.9rem 0 0.3rem; font-size: 0.95rem; color: #31333f; }
+
+.deslizador { position: relative; padding-top: 1.35rem; }
+
+.deslizador output {
+  position: absolute;
+  top: 0;
+  min-width: 1.4rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #31333f;
+}
+
+.extremos {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--suave);
+}
+
+.doble {
+  position: relative;
+  height: 28px;
+  margin: 0.15rem 0 0.4rem;
+}
+
+.doble .relleno {
+  position: absolute;
+  top: 12px;
+  height: 4px;
+  background: #0B3A5B;
+  border-radius: 4px;
+}
+
+.doble::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12px;
+  height: 4px;
+  background: #c7c9cc;
+  border-radius: 4px;
+}
+
+.doble input[type="range"] {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  appearance: none;
+}
+
+.doble input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+
+.doble input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #0B3A5B;
+  cursor: pointer;
+}
+
+.doble input[type="range"]::-moz-range-track { height: 4px; background: transparent; border: 0; }
+
+.doble input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  height: 16px;
+  width: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #0B3A5B;
+  cursor: pointer;
+}
 
 .secciones {
   display: flex;

@@ -15,14 +15,33 @@
       <h2>Tus datos</h2>
       <label for="modelo">Modelo</label>
       <select id="modelo"></select>
-      <label for="horizonte">Meses hacia adelante: <span id="horizonte-valor">12</span></label>
-      <input id="horizonte" type="range" min="1" max="24" value="12">
-      <label for="desde">Desde</label>
-      <input id="desde" type="date">
-      <label for="hasta">Hasta</label>
-      <input id="hasta" type="date">
+      <span class="etiqueta">Definir el horizonte</span>
+      <div class="fila">
+        <label class="fila"><input type="radio" name="modo" value="meses" checked> Meses</label>
+        <label class="fila"><input type="radio" name="modo" value="fecha"> Fecha final</label>
+      </div>
+      <div id="bloque-meses">
+        <label for="horizonte">Meses hacia adelante</label>
+        <div class="deslizador">
+          <output id="horizonte-valor" for="horizonte">12</output>
+          <input id="horizonte" type="range" min="1" max="24" value="12">
+        </div>
+      </div>
+      <div id="bloque-fecha" hidden>
+        <label for="fecha-final">Fecha final de la proyección</label>
+        <input id="fecha-final" type="date" value="2027-09-30" min="2026-10-31" max="2028-09-30">
+        <p class="nota" id="equivale"></p>
+      </div>
+      <span class="etiqueta">Rango del historial</span>
+      <div class="extremos"><span id="desde-etiq"></span><span id="hasta-etiq"></span></div>
+      <div class="doble" id="doble">
+        <span class="relleno" id="relleno"></span>
+        <input id="desde-idx" type="range" min="0" value="0">
+        <input id="hasta-idx" type="range" min="0" value="0">
+      </div>
       <label class="fila"><input id="politica" type="checkbox" checked> Superponer la tasa de política</label>
-      <div class="fila" style="margin-top:0.6rem">
+      <span class="etiqueta">Agregados en el historial</span>
+      <div class="fila">
         <label class="fila"><input type="radio" name="vista" value="niveles" checked> Niveles</label>
         <label class="fila"><input type="radio" name="vista" value="crecimiento"> Crecimiento anual</label>
       </div>
@@ -30,10 +49,10 @@
     </aside>
     <main>
       <h1>Simulación de la tasa de consumo</h1>
-      <p class="resumen" id="resumen"></p>
+      <span class="etiqueta">Sección</span>
       <div class="secciones" id="secciones">
-        <label class="fila"><input type="radio" name="seccion" value="historial"> Historial</label>
-        <label class="fila"><input type="radio" name="seccion" value="proyeccion" checked> Proyección</label>
+        <label class="fila"><input type="radio" name="seccion" value="historial" checked> Historial</label>
+        <label class="fila"><input type="radio" name="seccion" value="proyeccion"> Proyección</label>
         <label class="fila"><input type="radio" name="seccion" value="desempeno"> Desempeño</label>
         <label class="fila"><input type="radio" name="seccion" value="estudio"> Estudio</label>
       </div>
