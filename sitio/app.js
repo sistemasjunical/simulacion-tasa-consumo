@@ -56,143 +56,152 @@ function colorBanda(tono) {
   return tono;
 }
 
+const AZUL = "#0B3A5B";
+const ORO = "#A67C2D";
+const CAFE = "#9C4A2B";
+const VERDE = "#1F6F5B";
+const pendientes = [];
+
+function hueco(id) {
+  pendientes.push(id);
+  return id.clave;
+}
+
 function grafico(series, bandas, titulo, ejeY) {
-  const ancho = 860;
-  const alto = 380;
-  const izq = 64;
-  const der = 16;
-  const arr = 28;
-  const aba = 36;
-  const puntos = [];
-  series.forEach((serie) => {
-    serie.x.forEach((x, i) => {
-      if (serie.y[i] === null || serie.y[i] === undefined) return;
-      puntos.push([Date.parse(x), serie.y[i]]);
-    });
-  });
-  (bandas || []).forEach((banda) => {
-    banda.bajo.forEach((y, i) => {
-      if (y === null || banda.alto[i] === null) return;
-      puntos.push([Date.parse(banda.x[i]), y], [Date.parse(banda.x[i]), banda.alto[i]]);
-    });
-  });
-  if (!puntos.length) return `<p>Ese rango no contiene ningún cierre mensual.</p>`;
-  const xs = puntos.map((punto) => punto[0]);
-  const ys = puntos.map((punto) => punto[1]);
-  const x0 = Math.min(...xs);
-  const x1 = Math.max(...xs);
-  let y0 = Math.min(...ys);
-  let y1 = Math.max(...ys);
-  const holgura = (y1 - y0) * 0.06 || 1;
-  y0 -= holgura;
-  y1 += holgura;
-  const sx = (x) => izq + ((x - x0) / (x1 - x0 || 1)) * (ancho - izq - der);
-  const sy = (y) => arr + ((y1 - y) / (y1 - y0 || 1)) * (alto - arr - aba);
-  const ticksY = 5;
-  let ejes = "";
-  for (let i = 0; i < ticksY; i += 1) {
-    const valor = y0 + ((y1 - y0) * i) / (ticksY - 1);
-    const y = sy(valor);
-    const mostrado = Math.abs(valor) < 0.05 ? 0 : valor;
-    const texto = Math.abs(mostrado) >= 1000 ? Math.round(mostrado).toLocaleString("es-CO") : coma(mostrado, Math.abs(mostrado) >= 100 ? 0 : 1);
-    ejes += `<line x1="${izq}" x2="${ancho - der}" y1="${y}" y2="${y}" stroke="#e6e7e8"/>`;
-    ejes += `<text x="${izq - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#5c656d">${texto}</text>`;
-  }
-  const anios = [];
-  const inicio = new Date(x0);
-  const fin = new Date(x1);
-  for (let anio = inicio.getUTCFullYear(); anio <= fin.getUTCFullYear(); anio += 1) {
-    if ((fin.getUTCFullYear() - inicio.getUTCFullYear()) > 8 && anio % 5 !== 0) continue;
-    const t = Date.parse(`${anio}-01-01`);
-    if (t < x0 || t > x1) continue;
-    anios.push(`<text x="${sx(t)}" y="${alto - 12}" text-anchor="middle" font-size="11" fill="#5c656d">${anio}</text>`);
-  }
-  let areas = "";
-  (bandas || []).forEach((banda) => {
-    const arriba = [];
-    const abajo = [];
-    banda.x.forEach((x, i) => {
-      if (banda.bajo[i] === null || banda.alto[i] === null) return;
-      const px = sx(Date.parse(x));
-      arriba.push(`${px},${sy(banda.alto[i])}`);
-      abajo.push(`${px},${sy(banda.bajo[i])}`);
-    });
-    if (arriba.length) areas += `<polygon points="${arriba.join(" ")} ${abajo.reverse().join(" ")}" fill="${banda.color}" stroke="none"><title>${banda.nombre}</title></polygon>`;
-  });
-  let trazos = "";
-  series.forEach((serie) => {
-    let camino = "";
-    let abierto = false;
-    serie.x.forEach((x, i) => {
-      const valor = serie.y[i];
-      if (valor === null || valor === undefined) {
-        abierto = false;
-        return;
-      }
-      camino += `${abierto ? "L" : "M"}${sx(Date.parse(x))},${sy(valor)}`;
-      abierto = true;
-    });
-    const dash = serie.dash ? ` stroke-dasharray="${serie.dash}"` : "";
-    trazos += `<path d="${camino}" fill="none" stroke="${serie.color}" stroke-width="${serie.ancho || 2}"${dash}/>`;
-    if (serie.puntos) {
-      serie.x.forEach((x, i) => {
-        if (serie.y[i] === null) return;
-        trazos += `<circle cx="${sx(Date.parse(x))}" cy="${sy(serie.y[i])}" r="4.5" fill="${serie.color}"/>`;
-      });
-    }
-  });
-  const leyenda = series.map((serie) => `<span style="color:${serie.color};margin-right:1rem">${serie.nombre}</span>`).join("");
-  return `<div class="grafico"><svg viewBox="0 0 ${ancho} ${alto}" role="img" aria-label="${titulo}">
-    <text x="${izq}" y="16" font-size="13" font-weight="600">${titulo}</text>
-    ${ejes}${anios.join("")}${areas}${trazos}
-    <text x="16" y="${alto / 2}" font-size="11" fill="#5c656d" transform="rotate(-90 16 ${alto / 2})">${ejeY}</text>
-  </svg><p>${leyenda}</p></div>`;
+  const clave = `g${pendientes.length}`;
+  hueco({ tipo: "lineas", clave, series, bandas, titulo, ejeY });
+  return `<div id="${clave}" class="grafico"></div>`;
 }
 
 function lineasIndice(series, titulo, ejeX) {
-  const ancho = 860;
-  const alto = 320;
-  const izq = 56;
-  const der = 16;
-  const arr = 28;
-  const aba = 36;
-  const n = series[0].y.length;
-  const ys = series.flatMap((serie) => serie.y);
-  let y0 = Math.min(...ys);
-  let y1 = Math.max(...ys);
-  const holgura = (y1 - y0) * 0.08 || 0.05;
-  y0 -= holgura;
-  y1 += holgura;
-  const sx = (i) => izq + (i / (n - 1)) * (ancho - izq - der);
-  const sy = (y) => arr + ((y1 - y) / (y1 - y0)) * (alto - arr - aba);
-  let ejes = "";
-  for (let k = 0; k < 5; k += 1) {
-    const valor = y0 + ((y1 - y0) * k) / 4;
-    const y = sy(valor);
-    ejes += `<line x1="${izq}" x2="${ancho - der}" y1="${y}" y2="${y}" stroke="#e6e7e8"/>`;
-    ejes += `<text x="${izq - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#5c656d">${coma(valor, 2)}</text>`;
-  }
-  let marcas = "";
-  for (let i = 0; i < n; i += 3) {
-    marcas += `<text x="${sx(i)}" y="${alto - 12}" text-anchor="middle" font-size="11" fill="#5c656d">${i}</text>`;
-  }
-  let trazos = "";
-  series.forEach((serie) => {
-    const camino = serie.y.map((valor, i) => `${i ? "L" : "M"}${sx(i)},${sy(valor)}`).join("");
-    trazos += `<path d="${camino}" fill="none" stroke="${serie.color}" stroke-width="2"/>`;
-  });
-  const leyenda = series.map((serie) => `<span style="color:${serie.color};margin-right:1rem">${serie.nombre}</span>`).join("");
-  return `<div class="grafico"><svg viewBox="0 0 ${ancho} ${alto}" role="img" aria-label="${titulo}">
-    <text x="${izq}" y="16" font-size="13" font-weight="600">${titulo}</text>
-    ${ejes}${marcas}${trazos}
-    <text x="${ancho / 2}" y="${alto - 2}" text-anchor="middle" font-size="11" fill="#5c656d">${ejeX}</text>
-  </svg><p>${leyenda}</p></div>`;
+  const clave = `g${pendientes.length}`;
+  hueco({ tipo: "indice", clave, series, titulo, ejeX });
+  return `<div id="${clave}" class="grafico"></div>`;
 }
 
 function barras(pares, titulo) {
-  const maximo = Math.max(...pares.map((par) => par.valor));
-  const filas = pares.map((par) => `<div style="display:grid;grid-template-columns:240px 1fr 64px;gap:8px;align-items:center;margin:3px 0"><span>${par.nombre}</span><div style="background:#e6e7e8"><div style="background:#243038;height:12px;width:${(par.valor / maximo) * 100}%"></div></div><span>${coma(par.valor, 3)}</span></div>`).join("");
-  return `<h3>${titulo}</h3>${filas}`;
+  const clave = `g${pendientes.length}`;
+  hueco({ tipo: "barras", clave, pares, titulo });
+  return `<div id="${clave}" class="grafico"></div>`;
+}
+
+function calorPlot(etiquetas, matriz) {
+  const clave = `g${pendientes.length}`;
+  hueco({ tipo: "calor", clave, etiquetas, matriz });
+  return `<div id="${clave}" class="grafico"></div>`;
+}
+
+function baseLayout(titulo, alto) {
+  return {
+    title: { text: titulo, font: { size: 16, color: "#1C1C1C", family: "Source Sans 3, Segoe UI, sans-serif" }, x: 0, xanchor: "left" },
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "#ffffff",
+    font: { family: "Source Sans 3, Segoe UI, sans-serif", color: "#1C1C1C", size: 13 },
+    hovermode: "x unified",
+    hoverlabel: { bgcolor: "#ffffff", bordercolor: "#D5D7DA", font: { family: "Source Sans 3, Segoe UI, sans-serif", color: "#1C1C1C" } },
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, x: 0 },
+    margin: { l: 58, r: 18, t: 72, b: 48 },
+    height: alto,
+    xaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA" },
+    yaxis: { gridcolor: "#E8EAEC", zeroline: false, linecolor: "#D5D7DA", separatethousands: true },
+    transition: { duration: 450, easing: "cubic-in-out" },
+  };
+}
+
+function trazo(serie) {
+  const marca = Boolean(serie.puntos);
+  const traza = {
+    type: "scatter",
+    x: serie.x,
+    y: serie.y,
+    name: serie.nombre,
+    mode: marca ? "markers" : "lines",
+    connectgaps: false,
+    line: { color: serie.color, width: serie.ancho || 2.2, dash: serie.dash ? "dash" : "solid" },
+    hovertemplate: "%{y:.2f}<extra>%{fullData.name}</extra>",
+  };
+  if (marca) traza.marker = { symbol: serie.simbolo || "diamond", size: 11, color: serie.color, line: { width: 0 } };
+  return traza;
+}
+
+function dibujarGraficos() {
+  const lote = pendientes.splice(0);
+  const config = { responsive: true, displayModeBar: false, displaylogo: false };
+  lote.forEach((item) => {
+    const nodo = document.getElementById(item.clave);
+    if (!nodo || typeof Plotly === "undefined") return;
+    if (item.tipo === "lineas") {
+      const datos = [];
+      (item.bandas || []).forEach((banda) => {
+        datos.push({ type: "scatter", x: banda.x, y: banda.alto, mode: "lines", line: { width: 0, color: "rgba(0,0,0,0)" }, hoverinfo: "skip", showlegend: false });
+        datos.push({
+          type: "scatter",
+          x: banda.x,
+          y: banda.bajo,
+          mode: "lines",
+          fill: "tonexty",
+          fillcolor: banda.color,
+          line: { width: 0, color: "rgba(0,0,0,0)" },
+          name: banda.nombre,
+          hoverinfo: "skip",
+        });
+      });
+      item.series.forEach((serie) => datos.push(trazo(serie)));
+      const layout = baseLayout(item.titulo, 460);
+      layout.xaxis.title = "Mes";
+      layout.yaxis.title = item.ejeY;
+      Plotly.newPlot(nodo, datos, layout, config);
+      return;
+    }
+    if (item.tipo === "indice") {
+      const datos = item.series.map((serie) => ({
+        x: serie.y.map((_, i) => i),
+        y: serie.y,
+        name: serie.nombre,
+        mode: "lines+markers",
+        line: { color: serie.color, width: 2.2 },
+        marker: { size: 6, color: serie.color },
+        hovertemplate: "Rezago %{x}<br>%{y:.2f}<extra>%{fullData.name}</extra>",
+      }));
+      const layout = baseLayout(item.titulo, 420);
+      layout.xaxis.title = item.ejeX;
+      layout.yaxis.title = "Correlación";
+      Plotly.newPlot(nodo, datos, layout, config);
+      return;
+    }
+    if (item.tipo === "barras") {
+      const layout = baseLayout(item.titulo, 440);
+      layout.yaxis.title = "Puntos porcentuales";
+      layout.margin.b = 140;
+      layout.xaxis.tickangle = -35;
+      Plotly.newPlot(nodo, [{
+        x: item.pares.map((par) => par.nombre),
+        y: item.pares.map((par) => par.valor),
+        type: "bar",
+        marker: { color: AZUL },
+        hovertemplate: "%{y:.3f} pp<extra>%{x}</extra>",
+      }], layout, config);
+      return;
+    }
+    const texto = item.matriz.map((fila) => fila.map((valor) => coma(valor, 2)));
+    const layout = baseLayout("Correlaciones en la muestra mensual", 520);
+    layout.xaxis.side = "bottom";
+    delete layout.xaxis.title;
+    delete layout.yaxis.title;
+    Plotly.newPlot(nodo, [{
+      z: item.matriz,
+      x: item.etiquetas,
+      y: item.etiquetas,
+      type: "heatmap",
+      zmin: -1,
+      zmax: 1,
+      colorscale: "Blues",
+      text: texto,
+      texttemplate: "%{text}",
+      hovertemplate: "%{y} · %{x}<br>%{z:.2f}<extra></extra>",
+      colorbar: { title: "Correlación" },
+    }], layout, config);
+  });
 }
 
 function estado() {
@@ -222,17 +231,17 @@ function recorte(campo) {
 function seccionHistorial() {
   const ui = estado();
   const tasa = recorte("y");
-  const series = [{ nombre: "Crédito de consumo", x: tasa.x, y: tasa.y, color: "#243038" }];
+  const series = [{ nombre: "Crédito de consumo", x: tasa.x, y: tasa.y, color: AZUL }];
   if (ui.politica) {
     const pol = recorte("pol");
-    series.push({ nombre: "Tasa de política", x: pol.x, y: pol.y, color: "#8a6a32" });
+    series.push({ nombre: "Tasa de política", x: pol.x, y: pol.y, color: ORO });
   }
   if (mes(ui.hasta) >= "2026-09") {
     series.push({
       nombre: "Octubre 2026, parcial",
       x: ["2026-10-31"],
       y: [D.parcial.tasa],
-      color: "#8a4b32",
+      color: CAFE,
       puntos: true,
       ancho: 0,
     });
@@ -241,7 +250,7 @@ function seccionHistorial() {
   const campos = crecimiento
     ? [["g_m1", "M1"], ["g_m2", "M2"], ["g_m3", "M3"]]
     : [["m1", "M1"], ["m2", "M2"], ["m3", "M3"]];
-  const colores = ["#243038", "#2f6f5b", "#8a4b32"];
+  const colores = [AZUL, VERDE, CAFE];
   const agregados = campos.map(([campo, nombre], i) => {
     const serie = recorte(campo);
     return { nombre, x: serie.x, y: serie.y, color: colores[i] };
@@ -309,12 +318,12 @@ function seccionProyeccion() {
     </div>
     ${grafico(
       [
-        { nombre: "Tasa observada", x: historia.x, y: historia.y, color: "#243038" },
-        { nombre: "Proyección", x: fechas, y: punto, color: "#8a4b32", dash: "5 4" },
+        { nombre: "Tasa observada", x: historia.x, y: historia.y, color: AZUL, ancho: 2.2 },
+        { nombre: "Proyección", x: fechas, y: punto, color: CAFE, dash: "5 4", ancho: 2.2 },
       ],
       [
         banda("banda_95_inferior", "banda_95_superior", "Banda 95 %", "rgba(138,164,181,0.35)"),
-        banda("banda_80_inferior", "banda_80_superior", "Banda 80 %", "rgba(36,48,56,0.18)"),
+        banda("banda_80_inferior", "banda_80_superior", "Banda 80 %", "rgba(11,58,91,0.22)"),
       ],
       `Proyección · ${D.nombres[ui.modelo]}`,
       "Porcentaje efectivo anual",
@@ -457,12 +466,11 @@ function seccionEstudio() {
     <p>Correlación de los crecimientos: M1–M2 ${coma(e.corr.g_m1_g_m2, 2)}, M1–M3 ${coma(e.corr.g_m1_g_m3, 2)} y M2–M3 ${coma(e.corr.g_m2_g_m3, 2)}. M2 y M3 van casi juntos.</p>
     ${tabla(["Variable", "VIF"], vif)}
     <p>Con esos VIF, el coeficiente de M2 o de M3 no se lee como el efecto de ese agregado.</p>
-    <h3>Correlaciones en la muestra mensual</h3>
-    ${calor}
+    ${calorPlot(etiquetas, matriz)}
     ${lineasIndice([
-      { nombre: "Crecimiento de M1", y: p.cruzada.g_m1, color: "#243038" },
-      { nombre: "Crecimiento de M2", y: p.cruzada.g_m2, color: "#2f6f5b" },
-      { nombre: "Crecimiento de M3", y: p.cruzada.g_m3, color: "#8a4b32" },
+      { nombre: "Crecimiento de M1", y: p.cruzada.g_m1, color: AZUL },
+      { nombre: "Crecimiento de M2", y: p.cruzada.g_m2, color: VERDE },
+      { nombre: "Crecimiento de M3", y: p.cruzada.g_m3, color: CAFE },
     ], "Correlación de la tasa con el crecimiento rezagado", "Rezago del agregado, en meses")}
     ${tabla(["Variable rezagada", "Rezago de mayor correlación", "Correlación"], rezagos)}
     <h2>Pruebas de series</h2>
@@ -479,7 +487,7 @@ function seccionEstudio() {
     <p>Los signos de los tres crecimientos no son estables. No son una elasticidad.</p>
     <h2>Residuos y regímenes</h2>
     <p>En el error a un mes del Ridge con agregados, Ljung-Box tiene valor p ${textoP(D.residuos.ljung6)} a 6 rezagos y ${textoP(D.residuos.ljung12)} a 12. Jarque-Bera tiene valor p ${textoP(D.residuos.jarque)} (asimetría ${coma(D.residuos.asimetria, 2)}, curtosis ${coma(D.residuos.curtosis, 2)}). El RMSE de la primera mitad de la evaluación es ${coma(D.residuos.rmse1, 2)} y el de la segunda, ${coma(D.residuos.rmse2, 2)}. Hay autocorrelación y colas pesadas. La banda empírica no promete la cobertura nominal.</p>
-    ${grafico([{ nombre: "Error a un mes", x: D.residuos.fecha, y: D.residuos.error, color: "#243038", ancho: 1.4 }], [], "Error a un mes: realizada menos pronóstico", "Puntos porcentuales")}
+    ${grafico([{ nombre: "Error a un mes", x: D.residuos.fecha, y: D.residuos.error, color: AZUL, ancho: 1.4 }], [], "Error a un mes: realizada menos pronóstico", "Puntos porcentuales")}
     <p>El backtest principal empieza en mayo de 2012, así que 2008-2009 no tiene error fuera de muestra en ese diseño. La fila de 2008-2009 es un diagnóstico con el primer origen en enero de 2007 y no entra en la tabla de referencia.</p>
     ${tabla(["Régimen", "Diseño", "Modelo", "Horizonte", "Meses", "RMSE"], regimenes)}
     <p>2022-2023 concentra el error: es la subida rápida de la política y de la tasa.</p>
@@ -505,6 +513,7 @@ function descargar(nombre, texto) {
 }
 
 function pintar() {
+  pendientes.length = 0;
   const ui = estado();
   document.getElementById("horizonte-valor").textContent = String(ui.horizonte);
   const punto = senda("ridge_agregados").find((fila) => fila.horizonte === 12);
@@ -525,6 +534,7 @@ function pintar() {
       descargar(`proyeccion_${ui.modelo}.csv`, `\uFEFF${csv(filas)}`);
     });
   }
+  dibujarGraficos();
   const metricas = document.getElementById("descarga-metricas");
   if (metricas) {
     metricas.addEventListener("click", () => {
